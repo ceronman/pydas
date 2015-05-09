@@ -1,61 +1,69 @@
-from time import sleep
+from time import sleep, time
 from random import random
 from subprocess import Popen, PIPE
 from threading import Thread
-from queue import Queue, Empty
+from queue import Queue
+from itertools import count
+from json import dumps
 
 
-def main():
-    DART = '/opt/google/dartsdk/bin/dart'
-    DAS = '/opt/google/dartsdk/bin/snapshots/analysis_server.dart.snapshot'
+DART = '/opt/google/dartsdk/bin/dart'
+DAS = '/opt/google/dartsdk/bin/snapshots/analysis_server.dart.snapshot'
 
-    input_queue = Queue()
-    output_queue = Queue()
 
-    def write_thread(pipe, queue):
+class DASServer:
+
+    def __init__(self):
+        self._counter = count()
+        self._input_queue = Queue()
+        self._output_queue = Queue()
+        self._requests = {}
+
+        self._process = Popen([DART, DAS], stdin=PIPE, stdout=PIPE, bufsize=1)
+
+        reader_thread = Thread(target=self._read_thread)
+        reader_thread.daemon = True
+        reader_thread.start()
+
+    def server_get_version(self):
+        self._request('server.getVersion')
+
+    def _read_thread(self):
         while True:
-            line = queue.get()
-            pipe.write(line)
-            pipe.flush()
+            line = self._process.stdout.readline()
+            self._output_queue.put(line)
+            print(line)
 
-    def read_thread(pipe, queue):
-        while True:
-            line = pipe.readline()
-            queue.put(line)
+    def _next_id(self):
+        return str(next(self._counter))
 
-    process = Popen([DART, DAS], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    def _request(self, method, args=None):
+        request_id = self._next_id()
+        body = {
+            'id': request_id,
+            'clientRequestTime': int(time() * 1000),
+            'method': method,
+        }
+        if args is not None:
+            body['args'] = args
 
-    reader_thread = Thread(target=read_thread,
-                           args=(process.stdout, output_queue))
-    reader_thread.daemon = True
-    reader_thread.start()
+        self._process.stdin.write(dumps(body).encode('utf-8') + b'\n')
+        self._process.stdin.flush()
 
-    writer_thread = Thread(target=write_thread,
-                           args=(process.stdin, input_queue))
-    writer_thread.daemon = True
-    writer_thread.start()
 
-    def test_read():
-        while True:
-            try:
-                value = output_queue.get(True, 0.1)
-                print(value)
-            except Empty:
-                print('Empty')
+if __name__ == '__main__':
+    das = DASServer()
 
-    t2 = Thread(target=test_read)
-    t2.daemon = True
-    t2.start()
+    sleep(1)
 
     def test_write():
         for i in range(10):
-            input_queue.put(b'\n')
-            sleep(random() * 5)
+            das.server_get_version()
+            sleep(random())
+
+        sleep(1)
+        print('write done')
 
     t1 = Thread(target=test_write)
     t1.start()
     t1.join()
-
-
-if __name__ == '__main__':
-    main()
