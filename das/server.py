@@ -2,60 +2,26 @@
 from time import time
 from subprocess import Popen, PIPE
 from threading import Thread
-from queue import Queue, Empty
 from itertools import count
 from json import dumps, loads
 
 
-DART = '/opt/google/dartsdk/bin/dart'
+DART = '/opt/google/dartsdk/bin/darts'
 DAS = '/opt/google/dartsdk/bin/snapshots/analysis_server.dart.snapshot'
 
 
-class QueueEventLoop:
-    def __init__(self):
-        self.queue = Queue()
-
-    def run_forever(self):
-        self.running = True
-        callbacks = []
-
-        while self.running:
-            try:
-                item = self.queue.get(True, 0.01)
-                callbacks.append(item)
-            except Empty:
-                pass
-
-            new_callbacks = []
-            for added_at, delay, callback, args in callbacks:
-                if time() - added_at >= delay:
-                    callback(*args)
-                else:
-                    new_callbacks.append((added_at, delay, callback, args))
-            callbacks = new_callbacks
-
-    def stop(self):
-        self.running = False
-
-    def call_soon_threadsafe(self, callback, *args):
-        self.queue.put((time(), 0, callback, args))
-
-    def call_later(self, delay, callback, *args):
-        self.queue.put((time(), delay, callback, args))
-
-
 class DASServer:
-    def __init__(self, event_loop):
+    def __init__(self, dart_path, das_path, event_loop):
+        self._path = [dart_path, das_path]
         self._event_loop = event_loop
         self._counter = count()
         self._request_callbacks = {}
         self._event_callbacks = {}
 
     def start(self):
-        self._process = Popen([DART, DAS], stdin=PIPE, stdout=PIPE, bufsize=1)
+        self._process = Popen(self._path, stdin=PIPE, stdout=PIPE, bufsize=1)
 
         reader_thread = Thread(target=self._read_thread)
-        # reader_thread.daemon = True
         reader_thread.start()
 
     def server_get_version(self, callback):
