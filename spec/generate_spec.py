@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     for domain in root.findall('./body/domain'):
         for request in domain.findall('request'):
-            print(domain.get('name'), request.get('method'))
+            print('REQUEST: ', domain.get('name'), request.get('method'))
 
             result = None
             result_doc = None
@@ -58,3 +58,17 @@ if __name__ == '__main__':
 
             doc_lines = parse_element_doc(request)
             print('\tdoc:', repr(doc_lines))
+
+        for notification in domain.findall('notification'):
+            print('EVENT: ', domain.get('name'), notification.get('event'))
+            doc_lines = parse_element_doc(notification)
+            print('\tdoc:', repr(doc_lines))
+
+            params = {}
+            param_docs = {}
+            for field in request.findall('./params/field'):
+                param_name = field.get('name')
+                params[param_name] = parse_field_type(field)
+                param_docs[param_name] = parse_element_doc(field)
+            print('\tparams:', repr(params))
+            print('\tparam docs:', repr(param_docs))
