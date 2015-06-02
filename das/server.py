@@ -44,14 +44,15 @@ class DartAnalysisServer:
 
     def _send_request(self, body):
         try:
-            method, callback = self._request_callbacks[body['id']]
+            method, callback, errback = self._request_callbacks[body['id']]
         except KeyError:
-            raise DartAnalysisException
+            raise DartAnalysisException('Response without an ID')
 
-        params = [method]
-        if 'result' in body:
-            params.append(body['result'])
-        self._event_loop.call_soon_threadsafe(callback, *params)
+        if 'error' in body and errback is not None:
+            self._event_loop.call_soon_threadsafe(errback, method, **body['error'])
+        elif callback is not None:
+            kwargs = body.get('result', {})
+            self._event_loop.call_soon_threadsafe(callback, method, **kwargs)
 
     def _send_event(self, body):
         try:
@@ -64,7 +65,7 @@ class DartAnalysisServer:
     def _next_id(self):
         return str(next(self._counter))
 
-    def raw_request(self, method, params=None, callback=None):
+    def request(self, method, params=None, callback=None, errback=None):
         request_id = self._next_id()
         body = {
             'id': request_id,
@@ -74,10 +75,10 @@ class DartAnalysisServer:
         if params is not None:
             body['params'] = params
 
-        self._request_callbacks[request_id] = (method, callback)
+        self._request_callbacks[request_id] = (method, callback, errback)
 
         self._process.stdin.write(dumps(body).encode('utf-8') + b'\n')
         self._process.stdin.flush()
 
-    def raw_on_event(self, event, callback):
+    def notification(self, event, callback):
         self._event_callbacks[event] = (event, callback)

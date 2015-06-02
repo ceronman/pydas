@@ -24,12 +24,29 @@ class DASServerTest(unittest.TestCase):
 
     def test_on_connected(self):
 
-        def on_connected(event, data):
+        def on_connected(event, version):
             self.assertEqual(event, 'server.connected')
-            self.das.raw_request('server.shutdow', None)
+            self.das.request('server.shutdow', None)
             self.loop.stop()
 
-        self.das.raw_on_event('server.connected', on_connected)
+        self.das.notification('server.connected', on_connected)
+        self.das.start()
+
+        self.loop.run_forever()
+        self.das.stop()
+
+    def test_on_get_version(self):
+
+        def on_version(method, version):
+            self.assertEqual(method, 'server.getVersion')
+            self.assertEqual(version, '1.6.0')
+            self.das.request('server.shutdow')
+            self.loop.stop()
+
+        def on_connected(event, version):
+            self.das.request('server.getVersion', callback=on_version)
+
+        self.das.notification('server.connected', on_connected)
         self.das.start()
 
         self.loop.run_forever()

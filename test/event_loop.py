@@ -19,18 +19,18 @@ class DummyEventLoop:
                     break
 
             new_callbacks = []
-            for added_at, delay, callback, args in callbacks:
+            for added_at, delay, callback, args, kwargs in callbacks:
                 if time.time() - added_at >= delay:
-                    callback(*args)
+                    callback(*args, **kwargs)
                 else:
-                    new_callbacks.append((added_at, delay, callback, args))
+                    new_callbacks.append((added_at, delay, callback, args, kwargs))
             callbacks = new_callbacks
 
     def stop(self):
         self._running = False
 
-    def call_soon_threadsafe(self, callback, *args):
-        self._queue.put((time.time(), 0, callback, args))
+    def call_soon_threadsafe(self, callback, *args, **kwargs):
+        self._queue.put((time.time(), 0, callback, args, kwargs))
 
-    def call_later(self, delay, callback, *args):
-        self._queue.put((time.time(), delay, callback, args))
+    def call_later(self, delay, callback, *args, **kwargs):
+        self._queue.put((time.time(), delay, callback, args, kwargs))
