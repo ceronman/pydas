@@ -14,6 +14,13 @@ class DartAnalysisException(Exception):
     pass
 
 
+class RequestError(Exception):
+    def __init__(self, raw_error):
+        self.code = raw_error['code']
+        self.message = raw_error['message']
+        self.stacktrace = raw_error.get('stackTrace', None)
+
+
 class DartAnalysisServer:
     def __init__(self, dart_path, das_path, event_loop):
         self._path = [dart_path, das_path]
@@ -49,7 +56,8 @@ class DartAnalysisServer:
             raise DartAnalysisException('Response without an ID')
 
         if 'error' in body and errback is not None:
-            self._event_loop.call_soon_threadsafe(errback, method, **body['error'])
+            self._event_loop.call_soon_threadsafe(errback, method,
+                                                  RequestError(body['error']))
         elif callback is not None:
             kwargs = body.get('result', {})
             self._event_loop.call_soon_threadsafe(callback, method, **kwargs)
