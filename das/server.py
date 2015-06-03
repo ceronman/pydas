@@ -73,7 +73,7 @@ class DartAnalysisServer:
     def _next_id(self):
         return str(next(self._counter))
 
-    def request(self, method, params=None, callback=None, errback=None):
+    def request(self, method, params=None, *, callback=None, errback=None):
         request_id = self._next_id()
         body = {
             'id': request_id,
@@ -88,5 +88,5 @@ class DartAnalysisServer:
         self._process.stdin.write(dumps(body).encode('utf-8') + b'\n')
         self._process.stdin.flush()
 
-    def notification(self, event, callback):
+    def notification(self, event, *, callback):
         self._event_callbacks[event] = (event, callback)

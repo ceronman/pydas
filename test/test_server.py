@@ -29,7 +29,7 @@ class DASServerTest(unittest.TestCase):
             self.das.request('server.shutdown', None)
             self.loop.stop()
 
-        self.das.notification('server.connected', on_connected)
+        self.das.notification('server.connected', callback=on_connected)
         self.das.start()
 
         self.loop.run_forever()
@@ -46,7 +46,7 @@ class DASServerTest(unittest.TestCase):
         def on_connected(event, version):
             self.das.request('server.getVersion', callback=on_version)
 
-        self.das.notification('server.connected', on_connected)
+        self.das.notification('server.connected', callback=on_connected)
         self.das.start()
 
         self.loop.run_forever()
@@ -68,7 +68,7 @@ class DASServerTest(unittest.TestCase):
             self.das.request('server.setSubscriptions',
                              callback=on_success, errback=on_error)
 
-        self.das.notification('server.connected', on_connected)
+        self.das.notification('server.connected', callback=on_connected)
         self.das.start()
 
         self.loop.run_forever()
