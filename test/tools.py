@@ -1,5 +1,6 @@
 import time
 import queue
+import functools
 
 
 class DummyEventLoop:
@@ -34,3 +35,20 @@ class DummyEventLoop:
 
     def call_later(self, delay, callback, *args, **kwargs):
         self._queue.put((time.time(), delay, callback, args, kwargs))
+
+
+def on_connected(test_function):
+
+    @functools.wraps(test_function)
+    def new_test_function(self):
+
+        def on_connected(event, version):
+            test_function(self)
+
+        self.das.notification('server.connected', callback=on_connected)
+        self.das.start()
+
+        self.loop.run_forever()
+        self.das.stop()
+
+    return new_test_function

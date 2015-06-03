@@ -2,7 +2,7 @@ import unittest
 import os
 
 from das.server import DartAnalysisServer
-from test.event_loop import DummyEventLoop
+from test.tools import DummyEventLoop, on_connected
 
 
 class DASServerTest(unittest.TestCase):
@@ -35,6 +35,7 @@ class DASServerTest(unittest.TestCase):
         self.loop.run_forever()
         self.das.stop()
 
+    @on_connected
     def test_on_get_version(self):
 
         def on_version(method, version):
@@ -43,15 +44,9 @@ class DASServerTest(unittest.TestCase):
             self.das.request('server.shutdown')
             self.loop.stop()
 
-        def on_connected(event, version):
-            self.das.request('server.getVersion', callback=on_version)
+        self.das.request('server.getVersion', callback=on_version)
 
-        self.das.notification('server.connected', callback=on_connected)
-        self.das.start()
-
-        self.loop.run_forever()
-        self.das.stop()
-
+    @on_connected
     def test_request_error(self):
 
         def on_success(method):
@@ -64,12 +59,4 @@ class DASServerTest(unittest.TestCase):
             self.das.request('server.shutdown')
             self.loop.stop()
 
-        def on_connected(event, version):
-            self.das.request('server.setSubscriptions',
-                             callback=on_success, errback=on_error)
-
-        self.das.notification('server.connected', callback=on_connected)
-        self.das.start()
-
-        self.loop.run_forever()
-        self.das.stop()
+        self.das.request('server.setSubscriptions', callback=on_success, errback=on_error)
