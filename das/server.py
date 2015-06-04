@@ -1,9 +1,9 @@
 
-from time import time
-from subprocess import Popen, PIPE
+import itertools
+import json
+import time
+from subprocess import Popen, PIPE, TimeoutExpired
 from threading import Thread
-from itertools import count
-from json import dumps, loads
 
 
 DART = '/opt/google/dartsdk/bin/darts'
@@ -25,7 +25,7 @@ class DartAnalysisServer:
     def __init__(self, dart_path, das_path, event_loop):
         self._path = [dart_path, das_path]
         self._event_loop = event_loop
-        self._counter = count()
+        self._id_counter = itertools.count()
         self._request_callbacks = {}
         self._event_callbacks = {}
 
@@ -35,21 +35,34 @@ class DartAnalysisServer:
         reader_thread = Thread(target=self._read_thread)
         reader_thread.start()
 
-    def stop(self):
-        self._process.terminate()
+    def stop(self, timeout=0):
+        self._process.stdin.close()
+        self._process.stdout.close()
+        try:
+            self._process.wait(timeout=timeout)
+        except TimeoutExpired:
+            self._process.kill()
 
     def _read_thread(self):
-        for line in self._process.stdout:
-            line = line.decode('utf-8')
-            body = loads(line)
+        while True:
+            try:
+                line = self._process.stdout.readline().decode('utf-8')
+            except ValueError:
+                break
+            if not line:
+                break
+            body = json.loads(line)
             if 'id' in body:
                 self._send_request(body)
             elif 'event' in body:
                 self._send_event(body)
             else:
-                raise DartAnalysisException('Unrecognizable line: ' + line)
+                raise DartAnalysisException('Unknown message: ' + line)
 
     def _send_request(self, body):
+        if self._process is None:
+            raise DartAnalysisException('Server not started')
+
         try:
             method, callback, errback = self._request_callbacks[body['id']]
         except KeyError:
@@ -63,6 +76,9 @@ class DartAnalysisServer:
             self._event_loop.call_soon_threadsafe(callback, method, **kwargs)
 
     def _send_event(self, body):
+        if self._process is None:
+            raise DartAnalysisException('Server not started')
+
         try:
             event, callback = self._event_callbacks[body['event']]
         except KeyError:
@@ -71,13 +87,13 @@ class DartAnalysisServer:
         self._event_loop.call_soon_threadsafe(callback, *params)
 
     def _next_id(self):
-        return str(next(self._counter))
+        return str(next(self._id_counter))
 
     def request(self, method, params=None, *, callback=None, errback=None):
         request_id = self._next_id()
         body = {
             'id': request_id,
-            'clientRequestTime': int(time() * 1000),
+            'clientRequestTime': int(time.time() * 1000),
             'method': method,
         }
         if params is not None:
@@ -85,7 +101,7 @@ class DartAnalysisServer:
 
         self._request_callbacks[request_id] = (method, callback, errback)
 
-        self._process.stdin.write(dumps(body).encode('utf-8') + b'\n')
+        self._process.stdin.write(json.dumps(body).encode('utf-8') + b'\n')
         self._process.stdin.flush()
 
     def notification(self, event, *, callback):
