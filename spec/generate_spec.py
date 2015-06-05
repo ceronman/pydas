@@ -1,4 +1,7 @@
+import re
+import textwrap
 import xml.etree.ElementTree as ElementTree
+from collections import OrderedDict
 
 
 def parse_field_type(field):
@@ -31,38 +34,64 @@ def parse_element_doc(element):
         lines.append(' '.join(parts))
     return lines
 
+
+def camelcase_to_underscore(name):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+
 if __name__ == '__main__':
     root = ElementTree.parse('spec_input.html').getroot()
 
     for domain in root.findall('./body/domain'):
+
+        print()
+        print()
+        print("@DartAnalysisServer.register_domain")
+        print("class {cls}Domain:".format(cls=domain.get('name').capitalize()))
+
         for request in domain.findall('request'):
-            print('REQUEST: ', domain.get('name'), request.get('method'))
+            # print('REQUEST: ', domain.get('name'), request.get('method'))
 
             result = None
             result_doc = None
             if request.find('./result/field'):
                 result = parse_field_type(request.find('./result/field'))
                 result_doc = parse_element_doc(request.find('result'))
-            print('\tresult:', repr(result))
-            print('\tresult doc:', repr(result_doc))
+            # print('\tresult:', repr(result))
+            # print('\tresult doc:', repr(result_doc))
 
-            params = {}
+            params = OrderedDict()
             param_docs = {}
             for field in request.findall('./params/field'):
                 param_name = field.get('name')
                 params[param_name] = parse_field_type(field)
                 param_docs[param_name] = parse_element_doc(field)
 
-            print('\tparams:', repr(params))
-            print('\tparam docs:', repr(param_docs))
+            # print('\tparams:', repr(params))
+            # print('\tparam docs:', repr(param_docs))
 
             doc_lines = parse_element_doc(request)
-            print('\tdoc:', repr(doc_lines))
+            # print('\tdoc:', repr(doc_lines))
+
+            param_parts = []
+            for param_name, param_type in params.items():
+                param_parts.append(camelcase_to_underscore(param_name) + ': ' +
+                                   param_type)
+            param_names = ', '.join(param_parts)
+
+            method = camelcase_to_underscore(request.get('method'))
+            print('    def {method}({params}):'.format(method=method,
+                                                       params=param_names))
+            doc_lines.append('"""')
+            doc_lines[0] = '"""' + doc_lines[0]
+            for line in doc_lines:
+                print(textwrap.indent(textwrap.fill(line), prefix="        "))
 
         for notification in domain.findall('notification'):
-            print('EVENT: ', domain.get('name'), notification.get('event'))
+            # print('EVENT: ', domain.get('name'), notification.get('event'))
             doc_lines = parse_element_doc(notification)
-            print('\tdoc:', repr(doc_lines))
+            # print('\tdoc:', repr(doc_lines))
 
             params = {}
             param_docs = {}
@@ -70,5 +99,5 @@ if __name__ == '__main__':
                 param_name = field.get('name')
                 params[param_name] = parse_field_type(field)
                 param_docs[param_name] = parse_element_doc(field)
-            print('\tparams:', repr(params))
-            print('\tparam docs:', repr(param_docs))
+            # print('\tparams:', repr(params))
+            # print('\tparam docs:', repr(param_docs))
