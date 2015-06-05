@@ -15,12 +15,21 @@ class DASServerTest(unittest.TestCase):
         self.loop = DummyEventLoop()
         self.das = DartAnalysisServer(dart_path, das_path, self.loop)
 
-        def on_timeout():
-            self.das.stop()
-            self.loop.stop()
-            self.fail('Test timeout')
+    def tearDown(self):
+        self.das.stop()
 
-        self.loop.call_later(1, on_timeout)
+    def run_loop(self):
+        def on_timeout():
+            self.loop.stop()
+            self.das.stop()
+            self.fail('Test timeout')
+        self.loop.call_later(2, on_timeout)
+
+        try:
+            self.loop.run_forever()
+        except Exception as e:
+            self.fail('Error during callback: {}'.format(e))
+        self.das.stop()
 
     def test_on_connected(self):
 
@@ -32,15 +41,14 @@ class DASServerTest(unittest.TestCase):
         self.das.notification('server.connected', callback=on_connected)
         self.das.start()
 
-        self.loop.run_forever()
-        self.das.stop()
+        self.run_loop()
 
     @on_connected
     def test_on_get_version(self):
 
         def on_version(method, version):
             self.assertEqual(method, 'server.getVersion')
-            self.assertEqual(version, '1.6.0')
+            self.assertTrue(version.startswith('1.6.'))
             self.das.request('server.shutdown')
             self.loop.stop()
 
@@ -48,7 +56,6 @@ class DASServerTest(unittest.TestCase):
 
     @on_connected
     def test_request_error(self):
-
         def on_success(method):
             self.fail('method should fail')
             self.das.request('server.shutdown')
@@ -59,4 +66,19 @@ class DASServerTest(unittest.TestCase):
             self.das.request('server.shutdown')
             self.loop.stop()
 
-        self.das.request('server.setSubscriptions', callback=on_success, errback=on_error)
+        self.das.request('server.setSubscriptions',
+                         callback=on_success, errback=on_error)
+
+    def test_on_callback_error(self):
+
+        def on_connected(event, version):
+            raise RuntimeError('runtime error')
+
+        self.das.notification('server.connected', callback=on_connected)
+        self.das.start()
+
+        try:
+            self.loop.run_forever()
+        except Exception as e:
+            self.assertEqual(str(e), 'runtime error')
+        self.das.stop()
