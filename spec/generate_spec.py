@@ -58,35 +58,41 @@ if __name__ == '__main__':
             if request.find('./result/field'):
                 result = parse_field_type(request.find('./result/field'))
                 result_doc = parse_element_doc(request.find('result'))
-            # print('\tresult:', repr(result))
-            # print('\tresult doc:', repr(result_doc))
 
             params = OrderedDict()
             param_docs = {}
             for field in request.findall('./params/field'):
-                param_name = field.get('name')
+                param_name = camelcase_to_underscore(field.get('name'))
                 params[param_name] = parse_field_type(field)
                 param_docs[param_name] = parse_element_doc(field)
 
-            # print('\tparams:', repr(params))
-            # print('\tparam docs:', repr(param_docs))
-
             doc_lines = parse_element_doc(request)
-            # print('\tdoc:', repr(doc_lines))
-
-            param_parts = []
-            for param_name, param_type in params.items():
-                param_parts.append(camelcase_to_underscore(param_name) + ': ' +
-                                   param_type)
-            param_names = ', '.join(param_parts)
-
+            param_names = ', '.join(params)
             method = camelcase_to_underscore(request.get('method'))
+            print()
             print('    def {method}({params}):'.format(method=method,
                                                        params=param_names))
-            doc_lines.append('"""')
-            doc_lines[0] = '"""' + doc_lines[0]
-            for line in doc_lines:
-                print(textwrap.indent(textwrap.fill(line), prefix="        "))
+
+            indent = '        '
+            print(textwrap.indent(textwrap.fill('"""' + doc_lines[0]),
+                                  prefix=indent))
+            for line in doc_lines[1:]:
+                print()
+                print(textwrap.indent(textwrap.fill(line), prefix=indent))
+            for param_name in params:
+                print()
+                param_doc = '\n'.join(param_docs[param_name])
+                line = ':param {param}: {doc}'.format(param=param_name,
+                                                      doc=param_doc)
+                line = textwrap.fill(line, subsequent_indent='    ')
+                print(textwrap.indent(line, prefix=indent))
+                param_type = params[param_name]
+                line = ':type {param}: {type}'.format(param=param_name,
+                                                      type=param_type)
+                line = textwrap.fill(line, subsequent_indent='    ')
+                print(textwrap.indent(line, prefix=indent))
+
+            print(indent + '"""')
 
         for notification in domain.findall('notification'):
             # print('EVENT: ', domain.get('name'), notification.get('event'))
