@@ -1,7 +1,6 @@
 import re
 import textwrap
 import xml.etree.ElementTree as ElementTree
-from collections import OrderedDict
 
 
 def parse_field_type(field):
@@ -37,14 +36,15 @@ def parse_element_doc(element):
 
 def parse_fields(element):
     if element is None:
-        return None
+        return []
 
-    fields = OrderedDict()
-    for field in element.findall('field'):
-        field_name = camelcase_to_underscore(field.get('name'))
-        fields[field_name] = {}
-        fields[field_name]['type'] = parse_field_type(field)
-        fields[field_name]['doc'] = parse_element_doc(field)
+    fields = []
+    for field_elem in element.findall('field'):
+        fields.append({
+            'name': field_elem.get('name'),
+            'type': parse_field_type(field_elem),
+            'doc': parse_element_doc(field_elem)
+        })
     return fields
 
 
@@ -56,94 +56,70 @@ def camelcase_to_underscore(name):
 def parse_spec(filename):
     root = ElementTree.parse(filename).getroot()
 
-    domains = OrderedDict()
+    domains = []
     for domain_elem in root.findall('./body/domain'):
-        domain = {"requests": [], "notifications": []}
-
+        requests = []
         for request_elem in domain_elem.findall('request'):
-            domain['requests'].append({
+            requests.append({
                 'name': request_elem.get('method'),
                 'params': parse_fields(request_elem.find('params')),
                 'result': parse_fields(request_elem.find('result')),
                 'doc': parse_element_doc(request_elem),
             })
 
+        notifications = []
         for notification_elem in domain_elem.findall('notification'):
-            domain['notifications'].append({
+            notifications.append({
                 'name': notification_elem.get('event'),
                 'params': parse_fields(notification_elem.find('params')),
                 'doc': parse_element_doc(notification_elem),
             })
+        domains.append({
+            "name": domain_elem.get('name'),
+            "requests": requests,
+            "notifications": notifications
+        })
 
-        domains[domain_elem.get('name')] = domain
+    return {'domains': domains}
 
-    return domains
+
+def generate_python_api(spec):
+    for domain in spec['domains']:
+        print()
+        print()
+        class_name = domain.get('name').capitalize()
+        print('class {class_name}Domain:'.format(**locals()))
+
+        for request in domain['requests']:
+            method = camelcase_to_underscore(request['name'])
+            args = ', '.join(p['name'] for p in request['params'])
+            method_def = '    def {method}({args})'.format(**locals())
+            indent = ' ' * (method_def.index('(') + 1)
+            line = textwrap.fill(method_def, width=80,
+                                 subsequent_indent=indent)
+            print(line)
+
+            indent = '        '
+            for i, line in enumerate(request['doc']):
+                if i == 0:
+                    line = '"""' + line
+                else:
+                    print()
+
+                line = textwrap.fill(line)
+                print(textwrap.indent(line, prefix=indent))
+
+            for param in request['params']:
+                print()
+                doc = '\n'.join(param['doc'])
+                param_doc = ':param {param[name]}: {doc}'.format(**locals())
+                line = textwrap.fill(param_doc, subsequent_indent='    ')
+                print(textwrap.indent(line, prefix=indent))
+                line = ':type {param[name]}: {param[type]}'.format(**locals())
+                print(textwrap.indent(line, prefix=indent))
+            print(textwrap.indent('"""', prefix=indent))
 
 
 if __name__ == '__main__':
-    import pprint
-    pprint.pprint(parse_spec('spec_input.html'))
-
-    # for domain in root.findall('./body/domain'):
-
-    #     print()
-    #     print()
-    #     print("@DartAnalysisServer.register_domain")
-    #     print("class {cls}Domain:".format(cls=domain.get('name').capitalize()))
-
-    #     for request in domain.findall('request'):
-    #         result = None
-    #         result_doc = None
-    #         if request.find('./result/field'):
-    #             result = parse_field_type(request.find('./result/field'))
-    #             result_doc = parse_element_doc(request.find('result'))
-
-    #         params = OrderedDict()
-    #         param_docs = {}
-    #         for field in request.findall('./params/field'):
-    #             param_name = camelcase_to_underscore(field.get('name'))
-    #             params[param_name] = parse_field_type(field)
-    #             param_docs[param_name] = parse_element_doc(field)
-
-    #         doc_lines = parse_element_doc(request)
-    #         param_names = ', '.join(params)
-    #         method = camelcase_to_underscore(request.get('method'))
-    #         print()
-    #         indent = ' ' * len('    def {0}('.format(method))
-    #         method_def = '    def {0}({1}):'.format(method, param_names)
-    #         print(textwrap.fill(method_def, subsequent_indent=indent))
-
-    #         indent = '        '
-    #         print(textwrap.indent(textwrap.fill('"""' + doc_lines[0]),
-    #                               prefix=indent))
-    #         for line in doc_lines[1:]:
-    #             print()
-    #             print(textwrap.indent(textwrap.fill(line), prefix=indent))
-    #         for param_name in params:
-    #             print()
-    #             param_doc = '\n'.join(param_docs[param_name])
-    #             line = ':param {param}: {doc}'.format(param=param_name,
-    #                                                   doc=param_doc)
-    #             line = textwrap.fill(line, subsequent_indent='    ')
-    #             print(textwrap.indent(line, prefix=indent))
-    #             param_type = params[param_name]
-    #             line = ':type {param}: {type}'.format(param=param_name,
-    #                                                   type=param_type)
-    #             line = textwrap.fill(line, subsequent_indent='    ')
-    #             print(textwrap.indent(line, prefix=indent))
-
-    #         print(indent + '"""')
-
-    #     for notification in domain.findall('notification'):
-    #         # print('EVENT: ', domain.get('name'), notification.get('event'))
-    #         doc_lines = parse_element_doc(notification)
-    #         # print('\tdoc:', repr(doc_lines))
-
-    #         params = {}
-    #         param_docs = {}
-    #         for field in request.findall('./params/field'):
-    #             param_name = field.get('name')
-    #             params[param_name] = parse_field_type(field)
-    #             param_docs[param_name] = parse_element_doc(field)
-    #         # print('\tparams:', repr(params))
-    #         # print('\tparam docs:', repr(param_docs))
+    spec = parse_spec('spec_input.html')
+    generate_python_api(spec)
