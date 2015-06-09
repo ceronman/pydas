@@ -100,6 +100,7 @@ def generate_python_api(spec):
             indent = ' ' * (method_def.index('(') + 1)
             line = textwrap.fill(method_def, width=80,
                                  subsequent_indent=indent)
+            print()
             print(line)
 
             indent = '        '
@@ -113,6 +114,57 @@ def generate_python_api(spec):
                 print(textwrap.indent(line, prefix=indent))
 
             for param in request['params']:
+                if not param['type']:
+                    continue
+                print()
+                name = camelcase_to_underscore(param['name'])
+                doc = '\n'.join(param['doc'])
+                param_doc = ':param {name}: {doc}'.format(**locals())
+                line = textwrap.fill(param_doc, subsequent_indent='    ')
+                print(textwrap.indent(line, prefix=indent))
+                line = ':type {name}: {param[type]}'.format(**locals())
+                print(textwrap.indent(line, prefix=indent))
+
+            if request['result']:
+                print()
+                print(textwrap.indent('Callback arguments:', prefix=indent))
+
+            for param in request['result']:
+                if not param['type']:
+                    continue
+                print()
+                name = camelcase_to_underscore(param['name'])
+                doc = '\n'.join(param['doc'])
+                param_doc = ':param {name}: {doc}'.format(**locals())
+                line = textwrap.fill(param_doc, subsequent_indent='    ')
+                print(textwrap.indent(line, prefix=indent))
+                line = ':type {name}: {param[type]}'.format(**locals())
+                print(textwrap.indent(line, prefix=indent))
+
+            print(textwrap.indent('"""', prefix=indent))
+
+        for notification in domain['notifications']:
+
+            method = camelcase_to_underscore(notification['name'])
+            method_def = '    def on_{method}(*, callback)'.format(**locals())
+            print()
+            print(method_def)
+
+            indent = '        '
+            for i, line in enumerate(notification['doc']):
+                if i == 0:
+                    line = '"""' + line
+                else:
+                    print()
+
+                line = textwrap.fill(line)
+                print(textwrap.indent(line, prefix=indent))
+
+            if notification['params']:
+                print()
+                print(textwrap.indent('Callback arguments:', prefix=indent))
+
+            for param in notification['params']:
                 if not param['type']:
                     continue
                 print()
