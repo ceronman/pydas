@@ -91,9 +91,12 @@ def generate_python_api(spec):
         print('class {class_name}Domain:'.format(**locals()))
 
         for request in domain['requests']:
+
             method = camelcase_to_underscore(request['name'])
-            args = ', '.join(p['name'] for p in request['params'])
-            method_def = '    def {method}({args})'.format(**locals())
+            params = [camelcase_to_underscore(p['name'])
+                      for p in request['params']]
+            params = ', '.join(params + ['*', 'callback=None', 'errback=None'])
+            method_def = '    def {method}({params})'.format(**locals())
             indent = ' ' * (method_def.index('(') + 1)
             line = textwrap.fill(method_def, width=80,
                                  subsequent_indent=indent)
@@ -110,12 +113,15 @@ def generate_python_api(spec):
                 print(textwrap.indent(line, prefix=indent))
 
             for param in request['params']:
+                if not param['type']:
+                    continue
                 print()
+                name = camelcase_to_underscore(param['name'])
                 doc = '\n'.join(param['doc'])
-                param_doc = ':param {param[name]}: {doc}'.format(**locals())
+                param_doc = ':param {name}: {doc}'.format(**locals())
                 line = textwrap.fill(param_doc, subsequent_indent='    ')
                 print(textwrap.indent(line, prefix=indent))
-                line = ':type {param[name]}: {param[type]}'.format(**locals())
+                line = ':type {name}: {param[type]}'.format(**locals())
                 print(textwrap.indent(line, prefix=indent))
             print(textwrap.indent('"""', prefix=indent))
 
