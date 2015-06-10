@@ -2,22 +2,27 @@ import re
 import textwrap
 import xml.etree.ElementTree as ElementTree
 
+type_map = {
+    'String': 'str'
+}
+
 
 def parse_field_type(field):
     if (field.tag == 'ref'):
-        return field.text.strip()
+        t = field.text.strip()
+        return type_map.get(t, t)
     if field.find('ref') is not None:
         return parse_field_type(field.find('ref'))
     elif field.find('list') is not None:
         item = parse_field_type(field.find('list'))
-        return 'List[{}]'.format(item)
+        return '[{}]'.format(item)
     elif field.find('map') is not None:
         key = parse_field_type(field.find('./map/key'))
         value = parse_field_type(field.find('./map/value'))
-        return 'Dict[{}:{}]'.format(key, value)
+        return '{{{}: {}}}'.format(key, value)
     elif field.find('union') is not None:
         values = [parse_field_type(v) for v in field.find('union')]
-        return 'Union[{}]:'.format(','.join(values))
+        return '({})'.format(' | '.join(values))
     else:
         raise Exception("Unknow field type")
 
@@ -85,10 +90,13 @@ def parse_spec(filename):
 
 
 def generate_python_api(spec):
+    print('from das.server import DartAnalysisServer')
     for domain in spec['domains']:
         print()
         print()
-        class_name = domain.get('name').capitalize()
+        print("@DartAnalysisServer.register_domain"
+              "('{}')".format(domain['name']))
+        class_name = domain['name'].capitalize()
         print('class {class_name}Domain:'.format(**locals()))
 
         indent = '    '
@@ -108,7 +116,7 @@ def generate_python_api(spec):
             params = [camelcase_to_underscore(p['name'])
                       for p in request['params']]
             params = ', '.join(params + ['*', 'callback=None', 'errback=None'])
-            method_def = '    def {method}({params})'.format(**locals())
+            method_def = '    def {method}({params}):'.format(**locals())
             indent = ' ' * (method_def.index('(') + 1)
             line = textwrap.fill(method_def, width=80,
                                  subsequent_indent=indent)
@@ -134,7 +142,8 @@ def generate_python_api(spec):
                 param_doc = ':param {name}: {doc}'.format(**locals())
                 line = textwrap.fill(param_doc, subsequent_indent='    ')
                 print(textwrap.indent(line, prefix=indent))
-                line = ':type {name}: {param[type]}'.format(**locals())
+                param_type = ':type {name}: {param[type]}'.format(**locals())
+                line = textwrap.fill(param_type, subsequent_indent='    ')
                 print(textwrap.indent(line, prefix=indent))
 
             if request['result']:
@@ -158,7 +167,7 @@ def generate_python_api(spec):
         for notification in domain['notifications']:
 
             method = camelcase_to_underscore(notification['name'])
-            method_def = '    def on_{method}(*, callback)'.format(**locals())
+            method_def = '    def on_{method}(*, callback):'.format(**locals())
             print()
             print(method_def)
 

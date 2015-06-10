@@ -22,12 +22,19 @@ class RequestError(Exception):
 
 
 class DartAnalysisServer:
+    _domains = {}
+
     def __init__(self, dart_path, das_path, event_loop):
         self._path = [dart_path, das_path]
         self._event_loop = event_loop
         self._id_counter = itertools.count()
         self._request_callbacks = {}
         self._event_callbacks = {}
+
+        for name, domain_class in self._domains.items():
+            domain = domain_class()
+            domain.server = self
+            setattr(self, name, domain)
 
     def start(self):
         self._process = Popen(self._path, stdin=PIPE, stdout=PIPE, bufsize=1)
@@ -106,3 +113,10 @@ class DartAnalysisServer:
 
     def notification(self, event, *, callback):
         self._event_callbacks[event] = (event, callback)
+
+    def register_domain(cls, domain):
+
+        def decorator(name):
+            cls._domains[name] = domain
+
+        return decorator
