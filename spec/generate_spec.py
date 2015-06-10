@@ -75,9 +75,10 @@ def parse_spec(filename):
                 'doc': parse_element_doc(notification_elem),
             })
         domains.append({
-            "name": domain_elem.get('name'),
-            "requests": requests,
-            "notifications": notifications
+            'name': domain_elem.get('name'),
+            'requests': requests,
+            'notifications': notifications,
+            'doc': parse_element_doc(domain_elem)
         })
 
     return {'domains': domains}
@@ -89,6 +90,17 @@ def generate_python_api(spec):
         print()
         class_name = domain.get('name').capitalize()
         print('class {class_name}Domain:'.format(**locals()))
+
+        indent = '    '
+        for i, line in enumerate(domain['doc']):
+            if i == 0:
+                line = '"""' + line
+            else:
+                print()
+
+            line = textwrap.fill(line)
+            print(textwrap.indent(line, prefix=indent))
+        print(textwrap.indent('"""', prefix=indent))
 
         for request in domain['requests']:
 
