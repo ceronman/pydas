@@ -116,7 +116,7 @@ def generate_python_api(spec):
             params = [camelcase_to_underscore(p['name'])
                       for p in request['params']]
             params = ', '.join(params + ['*', 'callback=None', 'errback=None'])
-            method_def = '    def {method}({params}):'.format(**locals())
+            method_def = '    def {method}(self, {params}):'.format(**locals())
             indent = ' ' * (method_def.index('(') + 1)
             line = textwrap.fill(method_def, width=80,
                                  subsequent_indent=indent)
@@ -164,10 +164,28 @@ def generate_python_api(spec):
 
             print(textwrap.indent('"""', prefix=indent))
 
+            method_name = domain['name'] + '.' + request['name']
+            line = "method = '{method_name}'".format(**locals())
+            print(textwrap.indent(line, prefix=indent))
+
+            param_values = {p['name']: camelcase_to_underscore(p['name'])
+                            for p in request['params']}
+            param_values = ', '.join("'{k}': {v}".format(k=k, v=v)
+                                     for k, v in param_values.items())
+            params_def = 'params = {{{param_values}}}'.format(**locals())
+            sub_indent = ' ' * (params_def.index('{') + 1)
+            line = textwrap.fill(params_def, width=70,
+                                 subsequent_indent=sub_indent)
+            print(textwrap.indent(line, prefix=indent))
+            kwargs = "callback=callback, errback=errback"
+            method = "self.server.request(method, params, {kwargs})"
+            print(textwrap.indent(method.format(**locals()), prefix=indent))
+
         for notification in domain['notifications']:
 
             method = camelcase_to_underscore(notification['name'])
-            method_def = '    def on_{method}(*, callback):'.format(**locals())
+            method_def = '    def on_{method}(self, *, callback):'
+            method_def = method_def.format(**locals())
             print()
             print(method_def)
 

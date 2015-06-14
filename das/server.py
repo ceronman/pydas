@@ -114,9 +114,10 @@ class DartAnalysisServer:
     def notification(self, event, *, callback):
         self._event_callbacks[event] = (event, callback)
 
-    def register_domain(cls, domain):
+    @classmethod
+    def register_domain(cls, name):
 
-        def decorator(name):
+        def decorator(domain):
             cls._domains[name] = domain
 
         return decorator

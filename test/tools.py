@@ -48,6 +48,6 @@ def on_connected(test_function):
         self.das.notification('server.connected', callback=on_connected)
         self.das.start()
 
-        self.run_loop()
+        self._run_loop()
 
     return new_test_function

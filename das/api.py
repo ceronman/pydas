@@ -7,7 +7,7 @@ class ServerDomain:
     server.
     """
 
-    def get_version(*, callback=None, errback=None):
+    def get_version(self, *, callback=None, errback=None):
         """Return the version number of the analysis server.
 
         Callback arguments:
@@ -15,16 +15,22 @@ class ServerDomain:
         :param version: The version number of the analysis server.
         :type version: str
         """
+        method = 'server.getVersion'
+        params = {}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def shutdown(*, callback=None, errback=None):
+    def shutdown(self, *, callback=None, errback=None):
         """Cleanly shutdown the analysis server. Requests that are received
         after this request will not be processed. Requests that were received
         before this request, but for which a response has not yet been sent,
         will not be responded to. No further responses or notifications will
         be sent after the response to this request has been sent.
         """
+        method = 'server.shutdown'
+        params = {}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def set_subscriptions(subscriptions, *, callback=None, errback=None):
+    def set_subscriptions(self, subscriptions, *, callback=None, errback=None):
         """Subscribe for services. All previous subscriptions are replaced by
         the given set of services.
 
@@ -35,8 +41,11 @@ class ServerDomain:
         :param subscriptions: A list of the services being subscribed to.
         :type subscriptions: [ServerService]
         """
+        method = 'server.setSubscriptions'
+        params = {'subscriptions': subscriptions}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def on_connected(*, callback):
+    def on_connected(self, *, callback):
         """Reports that the server is running. This notification is issued
         once after the server has started running but before any requests are
         processed to let the client know that it started correctly.
@@ -50,7 +59,7 @@ class ServerDomain:
         :type version: str
         """
 
-    def on_error(*, callback):
+    def on_error(self, *, callback):
         """Reports that an unexpected error has occurred while executing the
         server. This notification is not used for problems with specific
         requests (which are returned as part of the response) but is used for
@@ -76,7 +85,7 @@ class ServerDomain:
         :type stack_trace: str
         """
 
-    def on_status(*, callback):
+    def on_status(self, *, callback):
         """Reports the current status of the server. Parameters are omitted if
         there has been no change in the status represented by that parameter.
 
@@ -102,7 +111,7 @@ class AnalysisDomain:
     files.
     """
 
-    def get_errors(file, *, callback=None, errback=None):
+    def get_errors(self, file, *, callback=None, errback=None):
         """Return the errors associated with the given file. If the errors for
         the given file have not yet been computed, or the most recently
         computed errors for the given file are out of date, then the response
@@ -132,8 +141,11 @@ class AnalysisDomain:
         :param errors: The errors associated with the file.
         :type errors: [AnalysisError]
         """
+        method = 'analysis.getErrors'
+        params = {'file': file}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def get_hover(file, offset, *, callback=None, errback=None):
+    def get_hover(self, file, offset, *, callback=None, errback=None):
         """Return the hover information associate with the given location. If
         some or all of the hover information is not available at the time this
         request is processed the information will be omitted from the
@@ -155,8 +167,11 @@ class AnalysisDomain:
             that is included in multiple libraries).
         :type hovers: [HoverInformation]
         """
+        method = 'analysis.getHover'
+        params = {'file': file, 'offset': offset}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def get_library_dependencies(*, callback=None, errback=None):
+    def get_library_dependencies(self, *, callback=None, errback=None):
         """Return library dependency information for use in client-side
         indexing and package URI resolution.
 
@@ -171,8 +186,12 @@ class AnalysisDomain:
             client-side package URI resolution.
         :type package_map: {str: {str: [FilePath]}}
         """
+        method = 'analysis.getLibraryDependencies'
+        params = {}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def get_navigation(file, offset, length, *, callback=None, errback=None):
+    def get_navigation(self, file, offset, length, *, callback=None,
+                       errback=None):
         """Return the navigation information associated with the given region
         of the given file. If the navigation information for the given file
         has not yet been computed, or the most recently computed navigation
@@ -215,8 +234,11 @@ class AnalysisDomain:
             region of the file.
         :type regions: [NavigationRegion]
         """
+        method = 'analysis.getNavigation'
+        params = {'file': file, 'length': length, 'offset': offset}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def reanalyze(roots, *, callback=None, errback=None):
+    def reanalyze(self, roots, *, callback=None, errback=None):
         """Force the re-analysis of everything contained in the specified
         analysis roots. This will cause all previously computed analysis
         results to be discarded and recomputed, and will cause all subscribed
@@ -231,9 +253,12 @@ class AnalysisDomain:
         :param roots: A list of the analysis roots that are to be re-analyzed.
         :type roots: [FilePath]
         """
+        method = 'analysis.reanalyze'
+        params = {'roots': roots}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def set_analysis_roots(included, excluded, package_roots, *, callback=None,
-                           errback=None):
+    def set_analysis_roots(self, included, excluded, package_roots, *,
+                           callback=None, errback=None):
         """Sets the root paths used to determine which files to analyze. The
         set of files to be analyzed are all of the files in one of the root
         paths that are not either explicitly or implicitly excluded. A file is
@@ -284,8 +309,12 @@ class AnalysisDomain:
             used.
         :type package_roots: {FilePath: FilePath}
         """
+        method = 'analysis.setAnalysisRoots'
+        params = {'excluded': excluded, 'packageRoots': package_roots,
+                  'included': included}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def set_priority_files(files, *, callback=None, errback=None):
+    def set_priority_files(self, files, *, callback=None, errback=None):
         """Set the priority files to the files in the given list. A priority
         file is a file that is given priority when scheduling which analysis
         work to do first. The list typically contains those files that are
@@ -307,8 +336,11 @@ class AnalysisDomain:
         :param files: The files that are to be a priority for analysis.
         :type files: [FilePath]
         """
+        method = 'analysis.setPriorityFiles'
+        params = {'files': files}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def set_subscriptions(subscriptions, *, callback=None, errback=None):
+    def set_subscriptions(self, subscriptions, *, callback=None, errback=None):
         """Subscribe for services. All previous subscriptions are replaced by
         the current set of subscriptions. If a given service is not included
         as a key in the map then no files will be subscribed to the service,
@@ -338,8 +370,11 @@ class AnalysisDomain:
             being subscribed to the service.
         :type subscriptions: {AnalysisService: [FilePath]}
         """
+        method = 'analysis.setSubscriptions'
+        params = {'subscriptions': subscriptions}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def update_content(files, *, callback=None, errback=None):
+    def update_content(self, files, *, callback=None, errback=None):
         """Update the content of one or more files. Files that were previously
         updated but not included in this update remain unchanged. This
         effectively represents an overlay of the filesystem. The files whose
@@ -352,8 +387,11 @@ class AnalysisDomain:
         :type files: {FilePath: (AddContentOverlay | ChangeContentOverlay |
             RemoveContentOverlay)}
         """
+        method = 'analysis.updateContent'
+        params = {'files': files}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def update_options(options, *, callback=None, errback=None):
+    def update_options(self, options, *, callback=None, errback=None):
         """Update the options controlling analysis based on the given set of
         options. Any options that are not included in the analysis options
         will not be changed. If there are options in the analysis options that
@@ -362,8 +400,11 @@ class AnalysisDomain:
         :param options: The options that are to be used to control analysis.
         :type options: AnalysisOptions
         """
+        method = 'analysis.updateOptions'
+        params = {'options': options}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def on_errors(*, callback):
+    def on_errors(self, *, callback):
         """Reports the errors associated with a given file. The set of errors
         included in the notification is always a complete list that supersedes
         any previously reported errors.
@@ -380,7 +421,7 @@ class AnalysisDomain:
         :type errors: [AnalysisError]
         """
 
-    def on_flush_results(*, callback):
+    def on_flush_results(self, *, callback):
         """Reports that any analysis results that were previously associated
         with the given files should be considered to be invalid because those
         files are no longer being analyzed, either because the analysis root
@@ -401,7 +442,7 @@ class AnalysisDomain:
         :type files: [FilePath]
         """
 
-    def on_folding(*, callback):
+    def on_folding(self, *, callback):
         """Reports the folding regions associated with a given file. Folding
         regions can be nested, but will not be overlapping. Nesting occurs
         when a foldable element, such as a method, is nested inside another
@@ -420,7 +461,7 @@ class AnalysisDomain:
         :type regions: [FoldingRegion]
         """
 
-    def on_highlights(*, callback):
+    def on_highlights(self, *, callback):
         """Reports the highlight regions associated with a given file.
 
         This notification is not subscribed to by default. Clients can
@@ -441,7 +482,7 @@ class AnalysisDomain:
         :type regions: [HighlightRegion]
         """
 
-    def on_invalidate(*, callback):
+    def on_invalidate(self, *, callback):
         """Reports that the navigation information associated with a region of
         a single file has become invalid and should be re-requested.
 
@@ -466,7 +507,7 @@ class AnalysisDomain:
         :type delta: int
         """
 
-    def on_navigation(*, callback):
+    def on_navigation(self, *, callback):
         """Reports the navigation targets associated with a given file.
 
         This notification is not subscribed to by default. Clients can
@@ -498,7 +539,7 @@ class AnalysisDomain:
         :type files: [FilePath]
         """
 
-    def on_occurrences(*, callback):
+    def on_occurrences(self, *, callback):
         """Reports the occurrences of references to elements within a single
         file.
 
@@ -516,7 +557,7 @@ class AnalysisDomain:
         :type occurrences: [Occurrences]
         """
 
-    def on_outline(*, callback):
+    def on_outline(self, *, callback):
         """Reports the outline associated with a single file.
 
         This notification is not subscribed to by default. Clients can
@@ -532,7 +573,7 @@ class AnalysisDomain:
         :type outline: Outline
         """
 
-    def on_overrides(*, callback):
+    def on_overrides(self, *, callback):
         """Reports the overridding members in a file.
 
         This notification is not subscribed to by default. Clients can
@@ -555,7 +596,7 @@ class CompletionDomain:
     code completion suggestions.
     """
 
-    def get_suggestions(file, offset, *, callback=None, errback=None):
+    def get_suggestions(self, file, offset, *, callback=None, errback=None):
         """Request that completion suggestions for the given offset in the
         given file be returned.
 
@@ -573,8 +614,11 @@ class CompletionDomain:
             completion request.
         :type id: CompletionId
         """
+        method = 'completion.getSuggestions'
+        params = {'file': file, 'offset': offset}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def on_results(*, callback):
+    def on_results(self, *, callback):
         """Reports the completion suggestions that should be presented to the
         user. The set of suggestions included in the notification is always a
         complete list that supersedes any previously reported suggestions.
@@ -617,7 +661,7 @@ class SearchDomain:
     performed against the code base.
     """
 
-    def find_element_references(file, offset, include_potential, *,
+    def find_element_references(self, file, offset, include_potential, *,
                                 callback=None, errback=None):
         """Perform a search for references to the element defined or
         referenced at the given offset in the given file.
@@ -651,8 +695,12 @@ class SearchDomain:
             absent.
         :type element: Element
         """
+        method = 'search.findElementReferences'
+        params = {'file': file, 'offset': offset, 'includePotential':
+                  include_potential}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def find_member_declarations(name, *, callback=None, errback=None):
+    def find_member_declarations(self, name, *, callback=None, errback=None):
         """Perform a search for declarations of members whose name is equal to
         the given name.
 
@@ -668,8 +716,11 @@ class SearchDomain:
             request.
         :type id: SearchId
         """
+        method = 'search.findMemberDeclarations'
+        params = {'name': name}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def find_member_references(name, *, callback=None, errback=None):
+    def find_member_references(self, name, *, callback=None, errback=None):
         """Perform a search for references to members whose name is equal to
         the given name. This search does not check to see that there is a
         member defined with the given name, so it is able to find references
@@ -687,8 +738,12 @@ class SearchDomain:
             request.
         :type id: SearchId
         """
+        method = 'search.findMemberReferences'
+        params = {'name': name}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def find_top_level_declarations(pattern, *, callback=None, errback=None):
+    def find_top_level_declarations(self, pattern, *, callback=None,
+                                    errback=None):
         """Perform a search for declarations of top-level elements (classes,
         typedefs, getters, setters, functions and fields) whose name matches
         the given pattern.
@@ -706,8 +761,11 @@ class SearchDomain:
             request.
         :type id: SearchId
         """
+        method = 'search.findTopLevelDeclarations'
+        params = {'pattern': pattern}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def get_type_hierarchy(file, offset, *, callback=None, errback=None):
+    def get_type_hierarchy(self, file, offset, *, callback=None, errback=None):
         """Return the type hierarchy of the class declared or referenced at
         the given location.
 
@@ -730,8 +788,11 @@ class SearchDomain:
             sufficiently analyzed to allow a type hierarchy to be produced.
         :type hierarchy_items: [TypeHierarchyItem]
         """
+        method = 'search.getTypeHierarchy'
+        params = {'file': file, 'offset': offset}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def on_results(*, callback):
+    def on_results(self, *, callback):
         """Reports some or all of the results of performing a requested
         search. Unlike other notifications, this notification contains search
         results that should be added to any previously received search results
@@ -757,7 +818,7 @@ class EditDomain:
     applied to the code.
     """
 
-    def format(file, selection_offset, selection_length, *, callback=None,
+    def format(self, file, selection_offset, selection_length, *, callback=None,
                errback=None):
         """Format the contents of a single file. The currently selected region
         of text is passed in so that the selection can be preserved across the
@@ -799,8 +860,12 @@ class EditDomain:
             the code.
         :type selection_length: int
         """
+        method = 'edit.format'
+        params = {'selectionLength': selection_length, 'file': file,
+                  'selectionOffset': selection_offset}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def get_assists(file, offset, length, *, callback=None, errback=None):
+    def get_assists(self, file, offset, length, *, callback=None, errback=None):
         """Return the set of assists that are available at the given location.
         An assist is distinguished from a refactoring primarily by the fact
         that it affects a single file and does not require user input in order
@@ -823,8 +888,11 @@ class EditDomain:
         :param assists: The assists that are available at the given location.
         :type assists: [SourceChange]
         """
+        method = 'edit.getAssists'
+        params = {'file': file, 'length': length, 'offset': offset}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def get_available_refactorings(file, offset, length, *, callback=None,
+    def get_available_refactorings(self, file, offset, length, *, callback=None,
                                    errback=None):
         """Get a list of the kinds of refactorings that are valid for the
         given selection in the given file.
@@ -847,8 +915,11 @@ class EditDomain:
             selection.
         :type kinds: [RefactoringKind]
         """
+        method = 'edit.getAvailableRefactorings'
+        params = {'file': file, 'length': length, 'offset': offset}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def get_fixes(file, offset, *, callback=None, errback=None):
+    def get_fixes(self, file, offset, *, callback=None, errback=None):
         """Return the set of fixes that are available for the errors at a
         given offset in a given file.
 
@@ -866,9 +937,12 @@ class EditDomain:
             offset.
         :type fixes: [AnalysisErrorFixes]
         """
+        method = 'edit.getFixes'
+        params = {'file': file, 'offset': offset}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def get_refactoring(kind, file, offset, length, validate_only, options, *,
-                        callback=None, errback=None):
+    def get_refactoring(self, kind, file, offset, length, validate_only,
+                        options, *, callback=None, errback=None):
         """Get the changes required to perform a refactoring.
 
         If another refactoring request is received during the processing of
@@ -941,8 +1015,13 @@ class EditDomain:
             refactoring.
         :type potential_edits: [str]
         """
+        method = 'edit.getRefactoring'
+        params = {'file': file, 'length': length, 'kind': kind,
+                  'validateOnly': validate_only, 'offset': offset, 'options':
+                  options}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def sort_members(file, *, callback=None, errback=None):
+    def sort_members(self, file, *, callback=None, errback=None):
         """Sort all of the directives, unit and class members of the given
         Dart file.
 
@@ -962,6 +1041,9 @@ class EditDomain:
             effect the sorting.
         :type edit: SourceFileEdit
         """
+        method = 'edit.sortMembers'
+        params = {'file': file}
+        self.server.request(method, params, callback=callback, errback=errback)
 
 
 @DartAnalysisServer.register_domain('execution')
@@ -970,7 +1052,7 @@ class ExecutionDomain:
     execution or debugging experience.
     """
 
-    def create_context(context_root, *, callback=None, errback=None):
+    def create_context(self, context_root, *, callback=None, errback=None):
         """Create an execution context for the executable file with the given
         path. The context that is created will persist until
         execution.deleteContext is used to delete it. Clients, therefore, are
@@ -986,8 +1068,11 @@ class ExecutionDomain:
             was created.
         :type id: ExecutionContextId
         """
+        method = 'execution.createContext'
+        params = {'contextRoot': context_root}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def delete_context(id, *, callback=None, errback=None):
+    def delete_context(self, id, *, callback=None, errback=None):
         """Delete the execution context with the given identifier. The context
         id is no longer valid after this command. The server is allowed to re-
         use ids when they are no longer valid.
@@ -996,8 +1081,11 @@ class ExecutionDomain:
             deleted.
         :type id: ExecutionContextId
         """
+        method = 'execution.deleteContext'
+        params = {'id': id}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def map_uri(id, file, uri, *, callback=None, errback=None):
+    def map_uri(self, id, file, uri, *, callback=None, errback=None):
         """Map a URI from the execution context to the file that it
         corresponds to, or map a file to the URI that it corresponds to in the
         execution context.
@@ -1041,8 +1129,11 @@ class ExecutionDomain:
             omitted if the file field was not given in the request.
         :type uri: str
         """
+        method = 'execution.mapUri'
+        params = {'id': id, 'uri': uri, 'file': file}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def set_subscriptions(subscriptions, *, callback=None, errback=None):
+    def set_subscriptions(self, subscriptions, *, callback=None, errback=None):
         """Subscribe for services. All previous subscriptions are replaced by
         the given set of services.
 
@@ -1053,8 +1144,11 @@ class ExecutionDomain:
         :param subscriptions: A list of the services being subscribed to.
         :type subscriptions: [ExecutionService]
         """
+        method = 'execution.setSubscriptions'
+        params = {'subscriptions': subscriptions}
+        self.server.request(method, params, callback=callback, errback=errback)
 
-    def on_launch_data(*, callback):
+    def on_launch_data(self, *, callback):
         """Reports information needed to allow a single file to be launched.
 
         This notification is not subscribed to by default. Clients can
