@@ -216,6 +216,12 @@ def generate_python_api(spec):
                 print(textwrap.indent(line, prefix=indent))
             print(textwrap.indent('"""', prefix=indent))
 
+            event_name = domain['name'] + '.' + notification['name']
+            line = "event = '{event_name}'".format(**locals())
+            print(textwrap.indent(line, prefix=indent))
+            method = "self.server.notification(event, callback=callback)"
+            print(textwrap.indent(method.format(**locals()), prefix=indent))
+
 
 if __name__ == '__main__':
     spec = parse_spec('spec_input.html')

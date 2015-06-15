@@ -58,6 +58,8 @@ class ServerDomain:
         :param version: The version number of the analysis server.
         :type version: str
         """
+        event = 'server.connected'
+        self.server.notification(event, callback=callback)
 
     def on_error(self, *, callback):
         """Reports that an unexpected error has occurred while executing the
@@ -84,6 +86,8 @@ class ServerDomain:
             the error, used for debugging the server.
         :type stack_trace: str
         """
+        event = 'server.error'
+        self.server.notification(event, callback=callback)
 
     def on_status(self, *, callback):
         """Reports the current status of the server. Parameters are omitted if
@@ -103,6 +107,8 @@ class ServerDomain:
             are currently running pub.
         :type pub: PubStatus
         """
+        event = 'server.status'
+        self.server.notification(event, callback=callback)
 
 
 @DartAnalysisServer.register_domain('analysis')
@@ -235,7 +241,7 @@ class AnalysisDomain:
         :type regions: [NavigationRegion]
         """
         method = 'analysis.getNavigation'
-        params = {'file': file, 'length': length, 'offset': offset}
+        params = {'length': length, 'file': file, 'offset': offset}
         self.server.request(method, params, callback=callback, errback=errback)
 
     def reanalyze(self, roots, *, callback=None, errback=None):
@@ -310,7 +316,7 @@ class AnalysisDomain:
         :type package_roots: {FilePath: FilePath}
         """
         method = 'analysis.setAnalysisRoots'
-        params = {'excluded': excluded, 'packageRoots': package_roots,
+        params = {'packageRoots': package_roots, 'excluded': excluded,
                   'included': included}
         self.server.request(method, params, callback=callback, errback=errback)
 
@@ -420,6 +426,8 @@ class AnalysisDomain:
         :param errors: The errors contained in the file.
         :type errors: [AnalysisError]
         """
+        event = 'analysis.errors'
+        self.server.notification(event, callback=callback)
 
     def on_flush_results(self, *, callback):
         """Reports that any analysis results that were previously associated
@@ -441,6 +449,8 @@ class AnalysisDomain:
         :param files: The files that are no longer being analyzed.
         :type files: [FilePath]
         """
+        event = 'analysis.flushResults'
+        self.server.notification(event, callback=callback)
 
     def on_folding(self, *, callback):
         """Reports the folding regions associated with a given file. Folding
@@ -460,6 +470,8 @@ class AnalysisDomain:
         :param regions: The folding regions contained in the file.
         :type regions: [FoldingRegion]
         """
+        event = 'analysis.folding'
+        self.server.notification(event, callback=callback)
 
     def on_highlights(self, *, callback):
         """Reports the highlight regions associated with a given file.
@@ -481,6 +493,8 @@ class AnalysisDomain:
             region.
         :type regions: [HighlightRegion]
         """
+        event = 'analysis.highlights'
+        self.server.notification(event, callback=callback)
 
     def on_invalidate(self, *, callback):
         """Reports that the navigation information associated with a region of
@@ -506,6 +520,8 @@ class AnalysisDomain:
             it doesn't need to be re-requested.
         :type delta: int
         """
+        event = 'analysis.invalidate'
+        self.server.notification(event, callback=callback)
 
     def on_navigation(self, *, callback):
         """Reports the navigation targets associated with a given file.
@@ -538,6 +554,8 @@ class AnalysisDomain:
             in this array.
         :type files: [FilePath]
         """
+        event = 'analysis.navigation'
+        self.server.notification(event, callback=callback)
 
     def on_occurrences(self, *, callback):
         """Reports the occurrences of references to elements within a single
@@ -556,6 +574,8 @@ class AnalysisDomain:
             the file.
         :type occurrences: [Occurrences]
         """
+        event = 'analysis.occurrences'
+        self.server.notification(event, callback=callback)
 
     def on_outline(self, *, callback):
         """Reports the outline associated with a single file.
@@ -572,6 +592,8 @@ class AnalysisDomain:
         :param outline: The outline associated with the file.
         :type outline: Outline
         """
+        event = 'analysis.outline'
+        self.server.notification(event, callback=callback)
 
     def on_overrides(self, *, callback):
         """Reports the overridding members in a file.
@@ -588,6 +610,8 @@ class AnalysisDomain:
         :param overrides: The overrides associated with the file.
         :type overrides: [Override]
         """
+        event = 'analysis.overrides'
+        self.server.notification(event, callback=callback)
 
 
 @DartAnalysisServer.register_domain('completion')
@@ -653,6 +677,8 @@ class CompletionDomain:
             returned for the indicated completion.
         :type is_last: bool
         """
+        event = 'completion.results'
+        self.server.notification(event, callback=callback)
 
 
 @DartAnalysisServer.register_domain('search')
@@ -696,8 +722,8 @@ class SearchDomain:
         :type element: Element
         """
         method = 'search.findElementReferences'
-        params = {'file': file, 'offset': offset, 'includePotential':
-                  include_potential}
+        params = {'includePotential': include_potential, 'file': file,
+                  'offset': offset}
         self.server.request(method, params, callback=callback, errback=errback)
 
     def find_member_declarations(self, name, *, callback=None, errback=None):
@@ -810,6 +836,8 @@ class SearchDomain:
             returned for the indicated search.
         :type is_last: bool
         """
+        event = 'search.results'
+        self.server.notification(event, callback=callback)
 
 
 @DartAnalysisServer.register_domain('edit')
@@ -889,7 +917,7 @@ class EditDomain:
         :type assists: [SourceChange]
         """
         method = 'edit.getAssists'
-        params = {'file': file, 'length': length, 'offset': offset}
+        params = {'length': length, 'file': file, 'offset': offset}
         self.server.request(method, params, callback=callback, errback=errback)
 
     def get_available_refactorings(self, file, offset, length, *, callback=None,
@@ -916,7 +944,7 @@ class EditDomain:
         :type kinds: [RefactoringKind]
         """
         method = 'edit.getAvailableRefactorings'
-        params = {'file': file, 'length': length, 'offset': offset}
+        params = {'length': length, 'file': file, 'offset': offset}
         self.server.request(method, params, callback=callback, errback=errback)
 
     def get_fixes(self, file, offset, *, callback=None, errback=None):
@@ -1016,9 +1044,9 @@ class EditDomain:
         :type potential_edits: [str]
         """
         method = 'edit.getRefactoring'
-        params = {'file': file, 'length': length, 'kind': kind,
-                  'validateOnly': validate_only, 'offset': offset, 'options':
-                  options}
+        params = {'kind': kind, 'file': file, 'offset': offset,
+                  'validateOnly': validate_only, 'options': options, 'length':
+                  length}
         self.server.request(method, params, callback=callback, errback=errback)
 
     def sort_members(self, file, *, callback=None, errback=None):
@@ -1130,7 +1158,7 @@ class ExecutionDomain:
         :type uri: str
         """
         method = 'execution.mapUri'
-        params = {'id': id, 'uri': uri, 'file': file}
+        params = {'uri': uri, 'id': id, 'file': file}
         self.server.request(method, params, callback=callback, errback=errback)
 
     def set_subscriptions(self, subscriptions, *, callback=None, errback=None):
@@ -1170,3 +1198,5 @@ class ExecutionDomain:
             file.
         :type referenced_files: [FilePath]
         """
+        event = 'execution.launchData'
+        self.server.notification(event, callback=callback)

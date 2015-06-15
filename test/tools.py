@@ -24,7 +24,8 @@ class DummyEventLoop:
                 if time.time() - added_at >= delay:
                     callback(*args, **kwargs)
                 else:
-                    new_callbacks.append((added_at, delay, callback, args, kwargs))
+                    new_callbacks.append(
+                        (added_at, delay, callback, args, kwargs))
             callbacks = new_callbacks
 
     def stop(self):

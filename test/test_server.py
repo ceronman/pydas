@@ -79,10 +79,21 @@ class DASServerTest(unittest.TestCase):
                          callback=on_success, errback=on_error)
 
     @on_connected
-    def test_generated_method(self):
+    def test_generated_request(self):
         def on_version(method, version):
             self.assertEqual(method, 'server.getVersion')
             self.assertTrue(version.startswith('1.7'))
             self.loop.stop()
 
         self.das.server.get_version(callback=on_version)
+
+    def test_generated_notification(self):
+
+        def on_connected(event, version):
+            self.assertEqual(event, 'server.connected')
+            self.loop.stop()
+
+        self.das.server.on_connected(callback=on_connected)
+        self.das.start()
+
+        self._run_loop()
