@@ -121,3 +121,11 @@ class DartAnalysisServer:
             cls._domains[name] = domain
 
         return decorator
+
+    def check_version(self, version):
+        if isinstance(version, str):
+            version = [int(p) for p in version.strip().split('.')]
+
+        that_major, that_minor, that_patch = version
+        this_major, this_minor, this_patch = self.api_version
+        return (that_major == this_major and that_minor >= this_minor)

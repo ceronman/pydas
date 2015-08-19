@@ -60,7 +60,8 @@ def camelcase_to_underscore(name):
 
 def parse_spec(filename):
     root = ElementTree.parse(filename).getroot()
-
+    version = root.find('./body/h1/version').text.strip().split('.')
+    version = [int(part) for part in version]
     domains = []
     for domain_elem in root.findall('./body/domain'):
         requests = []
@@ -86,11 +87,14 @@ def parse_spec(filename):
             'doc': parse_element_doc(domain_elem)
         })
 
-    return {'domains': domains}
+    return {'domains': domains, 'version': version}
 
 
 def generate_python_api(spec):
     print('from das.server import DartAnalysisServer')
+    print()
+    print()
+    print("DartAnalysisServer.api_version = {0}".format(spec['version']))
     for domain in spec['domains']:
         print()
         print()

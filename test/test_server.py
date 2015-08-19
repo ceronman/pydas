@@ -5,7 +5,7 @@ from das.api import DartAnalysisServer
 from test.tools import DummyEventLoop, on_connected
 
 
-class DASServerTest(unittest.TestCase):
+class DartAnalysisServerTest(unittest.TestCase):
 
     def setUp(self):
         dart_sdk_path = os.environ['DART_SDK_PATH']
@@ -59,7 +59,7 @@ class DASServerTest(unittest.TestCase):
     def test_on_get_version(self):
         def on_version(method, version):
             self.assertEqual(method, 'server.getVersion')
-            self.assertTrue(version.startswith('1.7'))
+            self.assertTrue(self.das.check_version(version))
             self.loop.stop()
 
         self.das.request('server.getVersion', callback=on_version)
@@ -82,7 +82,7 @@ class DASServerTest(unittest.TestCase):
     def test_generated_request(self):
         def on_version(method, version):
             self.assertEqual(method, 'server.getVersion')
-            self.assertTrue(version.startswith('1.7'))
+            self.assertTrue(self.das.check_version(version))
             self.loop.stop()
 
         self.das.server.get_version(callback=on_version)

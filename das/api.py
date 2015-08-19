@@ -1,6 +1,9 @@
 from das.server import DartAnalysisServer
 
 
+DartAnalysisServer.api_version = [1, 6, 2]
+
+
 @DartAnalysisServer.register_domain('server')
 class ServerDomain:
     """The server domain contains API’s related to the execution of the
@@ -316,8 +319,8 @@ class AnalysisDomain:
         :type package_roots: {FilePath: FilePath}
         """
         method = 'analysis.setAnalysisRoots'
-        params = {'packageRoots': package_roots, 'excluded': excluded,
-                  'included': included}
+        params = {'included': included, 'packageRoots': package_roots,
+                  'excluded': excluded}
         self.server.request(method, params, callback=callback, errback=errback)
 
     def set_priority_files(self, files, *, callback=None, errback=None):
@@ -1044,9 +1047,8 @@ class EditDomain:
         :type potential_edits: [str]
         """
         method = 'edit.getRefactoring'
-        params = {'kind': kind, 'file': file, 'offset': offset,
-                  'validateOnly': validate_only, 'options': options, 'length':
-                  length}
+        params = {'options': options, 'file': file, 'offset': offset, 'kind':
+                  kind, 'length': length, 'validateOnly': validate_only}
         self.server.request(method, params, callback=callback, errback=errback)
 
     def sort_members(self, file, *, callback=None, errback=None):
