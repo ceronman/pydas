@@ -1,7 +1,7 @@
 from das.server import DartAnalysisServer
 
 
-DartAnalysisServer.api_version = [1, 6, 2]
+DartAnalysisServer.api_version = [1, 9, 0]
 
 
 @DartAnalysisServer.register_domain('server')
@@ -184,6 +184,9 @@ class AnalysisDomain:
         """Return library dependency information for use in client-side
         indexing and package URI resolution.
 
+        Clients that are only using the libraries field should consider using
+        the analyzedFiles notification instead.
+
         Callback arguments:
 
         :param libraries: A list of the paths of library elements referenced
@@ -217,6 +220,11 @@ class AnalysisDomain:
         always choosing a region that starts at the beginning of a line and
         ends at the end of a (possibly different) line in the file.
 
+        If a request is made for a file which does not exist, or which is not
+        currently subject to analysis (e.g. because it is not associated with
+        any analysis root specified to analysis.setAnalysisRoots), an error of
+        type GET_NAVIGATION_INVALID_FILE will be generated.
+
         :param file: The file in which navigation information is being
             requested.
         :type file: FilePath
@@ -244,7 +252,7 @@ class AnalysisDomain:
         :type regions: [NavigationRegion]
         """
         method = 'analysis.getNavigation'
-        params = {'length': length, 'file': file, 'offset': offset}
+        params = {'file': file, 'length': length, 'offset': offset}
         self.server.request(method, params, callback=callback, errback=errback)
 
     def reanalyze(self, roots, *, callback=None, errback=None):
@@ -319,8 +327,25 @@ class AnalysisDomain:
         :type package_roots: {FilePath: FilePath}
         """
         method = 'analysis.setAnalysisRoots'
-        params = {'included': included, 'packageRoots': package_roots,
-                  'excluded': excluded}
+        params = {'excluded': excluded, 'included': included,
+                  'packageRoots': package_roots}
+        self.server.request(method, params, callback=callback, errback=errback)
+
+    def set_general_subscriptions(self, subscriptions, *, callback=None,
+                                  errback=None):
+        """Subscribe for general services (that is, services that are not
+        specific to individual files). All previous subscriptions are replaced
+        by the given set of services.
+
+        It is an error if any of the elements in the list are not valid
+        services. If there is an error, then the current subscriptions will
+        remain unchanged.
+
+        :param subscriptions: A list of the services being subscribed to.
+        :type subscriptions: [GeneralAnalysisService]
+        """
+        method = 'analysis.setGeneralSubscriptions'
+        params = {'subscriptions': subscriptions}
         self.server.request(method, params, callback=callback, errback=errback)
 
     def set_priority_files(self, files, *, callback=None, errback=None):
@@ -350,11 +375,12 @@ class AnalysisDomain:
         self.server.request(method, params, callback=callback, errback=errback)
 
     def set_subscriptions(self, subscriptions, *, callback=None, errback=None):
-        """Subscribe for services. All previous subscriptions are replaced by
-        the current set of subscriptions. If a given service is not included
-        as a key in the map then no files will be subscribed to the service,
-        exactly as if the service had been included in the map with an
-        explicit empty list of files.
+        """Subscribe for services that are specific to individual files. All
+        previous subscriptions are replaced by the current set of
+        subscriptions. If a given service is not included as a key in the map
+        then no files will be subscribed to the service, exactly as if the
+        service had been included in the map with an explicit empty list of
+        files.
 
         Note that this request determines the set of requested subscriptions.
         The actual set of subscriptions at any given time is the intersection
@@ -412,6 +438,22 @@ class AnalysisDomain:
         method = 'analysis.updateOptions'
         params = {'options': options}
         self.server.request(method, params, callback=callback, errback=errback)
+
+    def on_analyzed_files(self, *, callback):
+        """Reports the paths of the files that are being analyzed.
+
+        This notification is not subscribed to by default. Clients can
+        subscribe by including the value "ANALYZED_FILES" in the list of
+        services passed in an analysis.setGeneralSubscriptions request.
+
+        Callback arguments:
+
+        :param directories: A list of the paths of the files that are being
+            analyzed.
+        :type directories: [FilePath]
+        """
+        event = 'analysis.analyzedFiles'
+        self.server.notification(event, callback=callback)
 
     def on_errors(self, *, callback):
         """Reports the errors associated with a given file. The set of errors
@@ -725,7 +767,7 @@ class SearchDomain:
         :type element: Element
         """
         method = 'search.findElementReferences'
-        params = {'includePotential': include_potential, 'file': file,
+        params = {'file': file, 'includePotential': include_potential,
                   'offset': offset}
         self.server.request(method, params, callback=callback, errback=errback)
 
@@ -849,8 +891,8 @@ class EditDomain:
     applied to the code.
     """
 
-    def format(self, file, selection_offset, selection_length, *, callback=None,
-               errback=None):
+    def format(self, file, selection_offset, selection_length, line_length, *,
+               callback=None, errback=None):
         """Format the contents of a single file. The currently selected region
         of text is passed in so that the selection can be preserved across the
         formatting operation. The updated selection will be as close to
@@ -876,6 +918,9 @@ class EditDomain:
             file.
         :type selection_length: int
 
+        :param line_length: The line length to be used by the formatter.
+        :type line_length: int
+
         Callback arguments:
 
         :param edits: The edit(s) to be applied in order to format the code.
@@ -892,7 +937,8 @@ class EditDomain:
         :type selection_length: int
         """
         method = 'edit.format'
-        params = {'selectionLength': selection_length, 'file': file,
+        params = {'file': file, 'lineLength': line_length,
+                  'selectionLength': selection_length,
                   'selectionOffset': selection_offset}
         self.server.request(method, params, callback=callback, errback=errback)
 
@@ -920,7 +966,7 @@ class EditDomain:
         :type assists: [SourceChange]
         """
         method = 'edit.getAssists'
-        params = {'length': length, 'file': file, 'offset': offset}
+        params = {'file': file, 'length': length, 'offset': offset}
         self.server.request(method, params, callback=callback, errback=errback)
 
     def get_available_refactorings(self, file, offset, length, *, callback=None,
@@ -947,7 +993,7 @@ class EditDomain:
         :type kinds: [RefactoringKind]
         """
         method = 'edit.getAvailableRefactorings'
-        params = {'length': length, 'file': file, 'offset': offset}
+        params = {'file': file, 'length': length, 'offset': offset}
         self.server.request(method, params, callback=callback, errback=errback)
 
     def get_fixes(self, file, offset, *, callback=None, errback=None):
@@ -1047,8 +1093,9 @@ class EditDomain:
         :type potential_edits: [str]
         """
         method = 'edit.getRefactoring'
-        params = {'options': options, 'file': file, 'offset': offset, 'kind':
-                  kind, 'length': length, 'validateOnly': validate_only}
+        params = {'file': file, 'kind': kind, 'length': length,
+                  'offset': offset, 'options': options,
+                  'validateOnly': validate_only}
         self.server.request(method, params, callback=callback, errback=errback)
 
     def sort_members(self, file, *, callback=None, errback=None):
@@ -1072,6 +1119,32 @@ class EditDomain:
         :type edit: SourceFileEdit
         """
         method = 'edit.sortMembers'
+        params = {'file': file}
+        self.server.request(method, params, callback=callback, errback=errback)
+
+    def organize_directives(self, file, *, callback=None, errback=None):
+        """Organizes all of the directives - removes unused imports and sorts
+        directives of the given Dart file according to the Dart Style Guide .
+
+        If a request is made for a file that does not exist, does not belong
+        to an analysis root or is not a Dart file, FILE_NOT_ANALYZED will be
+        generated.
+
+        If directives of the Dart file cannot be organized, for example
+        because it has scan or parse errors, or by other reasons,
+        ORGANIZE_DIRECTIVES_ERROR will be generated. The message will provide
+        datails about the reason.
+
+        :param file: The Dart file to organize directives in.
+        :type file: FilePath
+
+        Callback arguments:
+
+        :param edit: The file edit that is to be applied to the given file to
+            effect the organizing.
+        :type edit: SourceFileEdit
+        """
+        method = 'edit.organizeDirectives'
         params = {'file': file}
         self.server.request(method, params, callback=callback, errback=errback)
 
@@ -1160,7 +1233,7 @@ class ExecutionDomain:
         :type uri: str
         """
         method = 'execution.mapUri'
-        params = {'uri': uri, 'id': id, 'file': file}
+        params = {'file': file, 'id': id, 'uri': uri}
         self.server.request(method, params, callback=callback, errback=errback)
 
     def set_subscriptions(self, subscriptions, *, callback=None, errback=None):

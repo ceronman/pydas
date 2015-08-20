@@ -174,12 +174,13 @@ def generate_python_api(spec):
 
             param_values = {p['name']: camelcase_to_underscore(p['name'])
                             for p in request['params']}
-            param_values = ', '.join("'{k}': {v}".format(k=k, v=v)
-                                     for k, v in param_values.items())
+            param_values = ', '.join("'{k}':{v}".format(k=k, v=v)
+                                     for k, v in sorted(param_values.items()))
             params_def = 'params = {{{param_values}}}'.format(**locals())
             sub_indent = ' ' * (params_def.index('{') + 1)
-            line = textwrap.fill(params_def, width=70,
+            line = textwrap.fill(params_def, width=60,
                                  subsequent_indent=sub_indent)
+            line = line.replace(':', ': ')
             print(textwrap.indent(line, prefix=indent))
             kwargs = "callback=callback, errback=errback"
             method = "self.server.request(method, params, {kwargs})"
